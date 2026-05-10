@@ -1,4 +1,12 @@
 /**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+const parseConfigBoolean = value => {
+  return ['true', '1', 'yes'].includes(String(value).toLowerCase());
+};
+
+/**
  * A function that provides access to various configuration values.
  * @returns {Object} An object containing configuration values.
  */
@@ -27,7 +35,7 @@ export function useConfig() {
    * Indicates whether the current instance is an enterprise version.
    * @type {boolean}
    */
-  const isEnterprise = config.isEnterprise === 'true';
+  const isEnterprise = parseConfigBoolean(config.isEnterprise);
 
   /**
    * The name of the enterprise plan, if applicable.
@@ -36,11 +44,18 @@ export function useConfig() {
    */
   const enterprisePlanName = config.enterprisePlanName;
 
+  /**
+   * Allows local/self-hosted Captain testing without changing global plan state.
+   * @type {boolean}
+   */
+  const captainTestMode = parseConfigBoolean(config.captainTestMode);
+
   return {
     hostURL,
     vapidPublicKey,
     enabledLanguages,
     isEnterprise,
     enterprisePlanName,
+    captainTestMode,
   };
 }
