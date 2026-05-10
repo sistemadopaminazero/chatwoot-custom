@@ -12,6 +12,13 @@ module Featurable
     result[result.keys.size + 1] = "feature_#{feature['name']}".to_sym
   end
 
+  CAPTAIN_TEST_FEATURES = %w[
+    captain_integration
+    captain_integration_v2
+    captain_tasks
+    custom_tools
+  ].freeze
+
   included do
     include FlagShihTzu
     has_flags FEATURES.merge(column: 'feature_flags').merge(QUERY_MODE)
@@ -42,6 +49,8 @@ module Featurable
   end
 
   def feature_enabled?(name)
+    return true if captain_test_mode_enabled? && CAPTAIN_TEST_FEATURES.include?(name.to_s)
+
     send("feature_#{name}?")
   end
 
@@ -60,6 +69,10 @@ module Featurable
   end
 
   private
+
+  def captain_test_mode_enabled?
+    %w[true 1 yes].include?(ENV.fetch('CAPTAIN_TEST_MODE', 'false').to_s.downcase)
+  end
 
   def enable_default_features
     config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
