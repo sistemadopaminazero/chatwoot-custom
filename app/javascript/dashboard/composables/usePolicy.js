@@ -6,9 +6,16 @@ import {
   getUserPermissions,
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
-import { PREMIUM_FEATURES } from 'dashboard/featureFlags';
+import { FEATURE_FLAGS, PREMIUM_FEATURES } from 'dashboard/featureFlags';
 
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
+
+const CAPTAIN_TEST_FEATURES = new Set([
+  FEATURE_FLAGS.CAPTAIN,
+  FEATURE_FLAGS.CAPTAIN_CUSTOM_TOOLS,
+  FEATURE_FLAGS.CAPTAIN_V2,
+  FEATURE_FLAGS.CAPTAIN_TASKS,
+]);
 
 export function usePolicy() {
   const user = useMapGetter('getCurrentUser');
@@ -18,15 +25,20 @@ export function usePolicy() {
     'globalConfig/isACustomBrandedInstance'
   );
 
-  const { isEnterprise, enterprisePlanName } = useConfig();
+  const { isEnterprise, enterprisePlanName, captainTestMode } = useConfig();
   const { accountId } = useAccount();
 
   const getUserPermissionsForAccount = () => {
     return getUserPermissions(user.value, accountId.value);
   };
 
+  const isCaptainTestFeature = featureFlag => {
+    return captainTestMode && CAPTAIN_TEST_FEATURES.has(featureFlag);
+  };
+
   const isFeatureFlagEnabled = featureFlag => {
     if (!featureFlag) return true;
+    if (isCaptainTestFeature(featureFlag)) return true;
     return isFeatureEnabled.value(accountId.value, featureFlag);
   };
 
@@ -70,6 +82,7 @@ export function usePolicy() {
     // return false;
     // This supersedes everything
     if (!checkPermissions(perms)) return false;
+    if (isCaptainTestFeature(flag)) return true;
     if (!checkInstallationType(installation)) return false;
 
     if (isACustomBrandedInstance.value) {
@@ -107,6 +120,7 @@ export function usePolicy() {
   const shouldShowPaywall = featureFlag => {
     const flag = unref(featureFlag);
     if (!flag) return false;
+    if (isCaptainTestFeature(flag)) return false;
 
     if (isACustomBrandedInstance.value) {
       // custom branded instances never show paywall
