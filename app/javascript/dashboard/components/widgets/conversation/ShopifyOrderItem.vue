@@ -50,6 +50,23 @@ const financialStatus = computed(() => {
   return t(getStatusI18nKey('FINANCIAL', status));
 });
 
+const orderDisplayId = computed(() => props.order.name || props.order.id);
+
+const trackingItems = computed(() => props.order.tracking || []);
+
+const trackingKey = (tracking, index) => {
+  return [tracking.company, tracking.number, tracking.url, index]
+    .filter(Boolean)
+    .join('-');
+};
+
+const formatTrackingStatus = status => {
+  if (!status) {
+    return '';
+  }
+  return status.replace(/_/g, ' ');
+};
+
 const getFulfillmentClass = status => {
   const classes = {
     fulfilled: 'text-n-teal-9',
@@ -64,21 +81,21 @@ const getFulfillmentClass = status => {
   <div
     class="py-3 border-b border-n-weak last:border-b-0 flex flex-col gap-1.5"
   >
-    <div class="flex justify-between items-center">
-      <div class="font-medium flex">
+    <div class="flex justify-between items-center gap-2">
+      <div class="font-medium flex min-w-0">
         <a
           :href="order.admin_url"
           target="_blank"
           rel="noopener noreferrer"
           class="hover:underline text-n-slate-12 cursor-pointer truncate"
         >
-          {{ $t('CONVERSATION_SIDEBAR.SHOPIFY.ORDER_ID', { id: order.id }) }}
+          {{ $t('CONVERSATION_SIDEBAR.SHOPIFY.ORDER_ID', { id: orderDisplayId }) }}
           <i class="i-lucide-external-link pl-5" />
         </a>
       </div>
       <div
         :class="getStatusClass(order.financial_status)"
-        class="text-xs px-2 py-1 rounded capitalize truncate"
+        class="text-xs px-2 py-1 rounded capitalize truncate flex-shrink-0"
         :title="financialStatus"
       >
         {{ financialStatus }}
@@ -100,6 +117,44 @@ const getFulfillmentClass = status => {
       >
         {{ fulfillmentStatus }}
       </span>
+    </div>
+    <div
+      v-if="trackingItems.length"
+      class="mt-1 flex flex-col gap-2 rounded-md bg-n-alpha-2 p-2 text-sm"
+    >
+      <div
+        v-for="(tracking, index) in trackingItems"
+        :key="trackingKey(tracking, index)"
+        class="flex flex-col gap-1"
+      >
+        <div
+          v-if="tracking.company"
+          class="flex items-center gap-1 font-medium text-n-slate-12 min-w-0"
+        >
+          <i class="i-lucide-truck text-n-slate-11 flex-shrink-0" />
+          <span class="truncate">{{ tracking.company }}</span>
+        </div>
+        <div v-if="tracking.number" class="text-n-slate-11 break-all">
+          Codigo:
+          <span class="font-mono text-n-slate-12">{{ tracking.number }}</span>
+        </div>
+        <div
+          v-if="tracking.shipment_status"
+          class="capitalize text-xs text-n-slate-11"
+        >
+          {{ formatTrackingStatus(tracking.shipment_status) }}
+        </div>
+        <a
+          v-if="tracking.url"
+          :href="tracking.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-n-blue-11 hover:underline w-fit"
+        >
+          Abrir rastreio
+          <i class="i-lucide-external-link" />
+        </a>
+      </div>
     </div>
   </div>
 </template>
