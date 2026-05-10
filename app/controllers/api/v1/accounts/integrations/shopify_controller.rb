@@ -72,12 +72,49 @@ class Api::V1::Accounts::Integrations::ShopifyController < Api::V1::Accounts::Ba
       query: {
         customer_id: customer_id,
         status: 'any',
-        fields: 'id,email,created_at,total_price,currency,fulfillment_status,financial_status'
+        fields: 'id,name,email,created_at,total_price,currency,fulfillment_status,financial_status,fulfillments'
       }
     ).body['orders'] || []
 
-    orders.map do |order|
-      order.merge('admin_url' => "https://#{@hook.reference_id}/admin/orders/#{order['id']}")
+    orders.map { |order| decorate_order(order) }
+  end
+
+  def decorate_order(order)
+    order.except('fulfillments').merge(
+      'admin_url' => "https://#{@hook.reference_id}/admin/orders/#{order['id']}",
+      'tracking' => extract_tracking(order['fulfillments'])
+    )
+  end
+
+  def extract_tracking(fulfillments)
+    Array(fulfillments)
+      .flat_map { |fulfillment| tracking_entries_for(fulfillment) }
+      .uniq { |tracking| [tracking['company'], tracking['number'], tracking['url']] }
+  end
+
+  def tracking_entries_for(fulfillment)
+    numbers = Array(fulfillment['tracking_numbers'])
+    numbers = [fulfillment['tracking_number']].compact if numbers.empty?
+
+    urls = Array(fulfillment['tracking_urls'])
+    urls = [fulfillment['tracking_url']].compact if urls.empty?
+
+    entry_count = [numbers.length, urls.length, 1].max
+
+    entry_count.times.filter_map do |index|
+      number = numbers[index] || fulfillment['tracking_number']
+      url = urls[index] || fulfillment['tracking_url']
+      company = fulfillment['tracking_company']
+
+      next if number.blank? && url.blank? && company.blank?
+
+      {
+        'company' => company,
+        'number' => number,
+        'url' => url,
+        'shipment_status' => fulfillment['shipment_status'],
+        'status' => fulfillment['status']
+      }.compact
     end
   end
 
